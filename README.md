@@ -90,6 +90,7 @@ step 4. For Occupancy Prediction task, download (only) the 'gts' from [CVPR2023-
 python tools/train.py $config
 # multiple gpu
 ./tools/dist_train.sh $config num_gpu
+./tools/dist_train.sh ./configs/bevdet/bevdet-r50-cbgs.py 8
 ```
 
 #### Test model
