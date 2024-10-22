@@ -37,7 +37,7 @@ def build_dataset(cfg, default_args=None):
         dataset = ClassBalancedDataset(
             build_dataset(cfg['dataset'], default_args), cfg['oversample_thr'])
     elif cfg['type'] == 'CBGSDataset':
-        dataset = CBGSDataset(build_dataset(cfg['dataset'], default_args))
+        dataset = CBGSDataset(build_dataset(cfg['dataset'], default_args))  # TODO: debug
     elif isinstance(cfg.get('ann_file'), (list, tuple)):
         dataset = _concat_dataset(cfg, default_args)
     elif cfg['type'] in DATASETS._module_dict.keys():

@@ -66,7 +66,7 @@ numC_Trans = 64
 model = dict(
     type='BEVDet',
     img_backbone=dict(
-        pretrained='./work_dirs/bevdet-r50-cbgs/epoch_20.pth',
+        pretrained='./ckpts/resnet50-0676ba61.pth',
         type='ResNet',
         depth=50,
         num_stages=4,
@@ -234,7 +234,7 @@ test_data_config = dict(
     ann_file=data_root + 'bevdetv3-nuscenes_infos_val.pkl')
 
 data = dict(
-    samples_per_gpu=2,
+    samples_per_gpu=4,
     workers_per_gpu=2,
     train=dict(
         type='CBGSDataset',

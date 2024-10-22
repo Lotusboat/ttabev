@@ -1,4 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+# update ./mmdet3d/datasets/custom_3d.py to utilize virtual depth
 import tempfile
 import warnings
 from os import path as osp

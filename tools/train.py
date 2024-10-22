@@ -13,6 +13,7 @@ import torch.distributed as dist
 import torch.nn as nn
 from mmcv import Config, DictAction
 from mmcv.runner import get_dist_info, init_dist
+import mmdet
 
 from mmdet import __version__ as mmdet_version
 from mmdet3d import __version__ as mmdet3d_version
@@ -29,6 +30,28 @@ try:
     from mmdet.utils import setup_multi_processes
 except ImportError:
     from mmdet3d.utils import setup_multi_processes
+
+# PredBN+
+# class PredBNPlus(nn.Module):
+#     def __init__(self, model):
+#         super(PredBNPlus, self).__init__()
+#         self.model = model
+#         # self.bn = nn.BatchNorm1d(1)
+#         # self.bn.weight.data.fill_(1)
+#         # self.bn.bias.data.fill_(0)
+    
+#     def forward(self, x):
+#         self.model.train()  # set model to training mode to update BN stats
+#         with torch.no_grad():
+#             x = self.model(x)
+#         self.model.eval()   # set model back to evaluation mode
+#         return self.model(x)
+    
+#     def __getattr__(self, name):
+#         try:
+#             return super(PredBNPlus, self).__getattr__(name)
+#         except AttributeError:
+#             return getattr(self.model, name)
 
 
 def parse_args():
@@ -265,6 +288,9 @@ def main():
     # add an attribute for visualization convenience
     model.CLASSES = datasets[0].CLASSES
 
+    # try to wrap the model with PredBN+
+    # model = PredBNPlus(model)
+    # print("==========build model successfully==========")
 
     train_model(
         model,
