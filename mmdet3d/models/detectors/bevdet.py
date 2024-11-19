@@ -10,6 +10,48 @@ from .centerpoint import CenterPoint
 from mmdet3d.models.utils.grid_mask import GridMask
 from mmdet.models.backbones.resnet import ResNet
 
+# 指定为全局变量
+VIRTUAL_FOCAL = 512.0
+
+def approx_eval_resolution(h, w, scale_min=512, scale_max=4096):
+    """
+    Approximates the resolution an image with h x w resolution would
+    run through a model at which constrains the scale to a min and max. 
+    Args:
+        h (int): input resolution height
+        w (int): input resolution width
+        scale_min (int): minimum scale allowed to resize too
+        scale_max (int): maximum scale allowed to resize too
+    Returns:
+        h (int): output resolution height
+        w (int): output resolution width
+        sf (float): scaling factor that was applied
+            which can convert from original --> network resolution.
+    """
+    orig_h = h
+    # first resize to min
+    sf = scale_min / min(h, w)
+    h *= sf
+    w *= sf
+    # next resize to max
+    sf = min(scale_max / max(h, w), 1.0)
+    h *= sf
+    w *= sf
+    return h, w, h/orig_h
+
+def compute_virtual_scale_from_focal_spaces(fv, Hv, f, H):
+    """
+    Computes the scaling factor of depth from virtual to real space
+    Args:
+        fv: focal length in virtual space
+        Hv: height in virtual space
+        f: focal length in real space
+        H: height in real space
+    Returns:
+        scaling factor from virtual to real space
+    """
+    return (H * fv) / (f * Hv)
+
 
 @DETECTORS.register_module()
 class BEVDet(CenterPoint):
@@ -87,6 +129,7 @@ class BEVDet(CenterPoint):
         return [imgs, sensor2keyegos, ego2globals, intrins,
                 post_rots, post_trans, bda]
 
+    # 不是这个extract_img_feat
     def extract_img_feat(self, img, img_metas, **kwargs):
         """Extract features of images."""
         img = self.prepare_inputs(img)
@@ -95,6 +138,7 @@ class BEVDet(CenterPoint):
         x = self.bev_encoder(x)
         return [x], depth
 
+    # Final: in this extract_feat
     def extract_feat(self, points, img, img_metas, **kwargs):
         """Extract features from images and points."""
         img_feats, depth = self.extract_img_feat(img, img_metas, **kwargs)
@@ -371,6 +415,7 @@ class BEVDet4D(BEVDet):
         output = F.grid_sample(input, grid.to(input.dtype), align_corners=True)
         return output
 
+    # Final: in this prepare_bev_feat
     def prepare_bev_feat(self, img, rot, tran, intrin, post_rot, post_tran,
                          bda, mlp_input):
         x, _ = self.image_encoder(img)
@@ -405,6 +450,7 @@ class BEVDet4D(BEVDet):
         x = self.bev_encoder(bev_feat)
         return [x], depth
 
+    # Final: we also use this prepare_inputs when using depth
     def prepare_inputs(self, inputs, stereo=False):
         # split the inputs into each frame
         B, N, C, H, W = inputs[0].shape
@@ -458,13 +504,14 @@ class BEVDet4D(BEVDet):
         return imgs, sensor2keyegos, ego2globals, intrins, post_rots, post_trans, \
                bda, curr2adjsensor
 
+    # Final：会进入这个extract_img_feat
     def extract_img_feat(self,
                          img,
                          img_metas,
                          pred_prev=False,
                          sequential=False,
                          **kwargs):
-        if sequential:
+        if sequential:  # Final: in fact not sequential
             return self.extract_img_feat_sequential(img, kwargs['feat_prev'])
         imgs, sensor2keyegos, ego2globals, intrins, post_rots, post_trans, \
         bda, _ = self.prepare_inputs(img)
@@ -486,11 +533,25 @@ class BEVDet4D(BEVDet):
                 else:
                     with torch.no_grad():
                         bev_feat, depth = self.prepare_bev_feat(*inputs_curr)
+                
+                # compute and utilize virtual_depth
+                original_focal = intrin[0, 0, 0, 0].item()
+                original_height = img.shape[3]
+                original_width = img.shape[4]
+                virtual_focal = VIRTUAL_FOCAL
+                virtual_height, virtual_width, virtual_scale = \
+                    approx_eval_resolution(original_height, original_width)
+                self.virtual_to_real = compute_virtual_scale_from_focal_spaces(
+                    virtual_focal, virtual_height, original_focal, original_height)
+                self.real_to_virtual = 1.0 / self.virtual_to_real
+                virtual_depth = depth * self.virtual_to_real
+
             else:
                 bev_feat = torch.zeros_like(bev_feat_list[0])
                 depth = None
             bev_feat_list.append(bev_feat)
-            depth_list.append(depth)
+            depth_list.append(virtual_depth)
+            # depth_list.append(depth)
             key_frame = False
         if pred_prev:
             assert self.align_after_view_transfromation
@@ -523,7 +584,10 @@ class BEVDet4D(BEVDet):
 
 @DETECTORS.register_module()
 class BEVDepth4D(BEVDet4D):
+    virtual_to_real = 1.0
+    real_to_virtual = 1.0
 
+    # TODO: Attention Final: when using depth, in this forward_train
     def forward_train(self,
                       points=None,
                       img_metas=None,
@@ -563,7 +627,7 @@ class BEVDepth4D(BEVDet4D):
         img_feats, pts_feats, depth = self.extract_feat(
             points, img=img_inputs, img_metas=img_metas, **kwargs)
         gt_depth = kwargs['gt_depth']
-        loss_depth = self.img_view_transformer.get_depth_loss(gt_depth, depth)
+        loss_depth = self.img_view_transformer.get_depth_loss(gt_depth * self.real_to_virtual, depth)
         losses = dict(loss_depth=loss_depth)
         losses_pts = self.forward_pts_train(img_feats, gt_bboxes_3d,
                                             gt_labels_3d, img_metas,

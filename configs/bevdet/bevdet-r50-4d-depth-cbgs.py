@@ -88,6 +88,8 @@ numC_Trans = 80
 
 multi_adj_frame_id_cfg = (1, 1+1, 1)
 
+virtual_focal = 512.0
+
 model = dict(
     type='BEVDepth4D',
     align_after_view_transfromation=False,
@@ -279,7 +281,7 @@ test_data_config = dict(
     ann_file=data_root + 'bevdetv3-nuscenes_infos_val.pkl')
 
 data = dict(
-    samples_per_gpu=8,
+    samples_per_gpu=4,
     workers_per_gpu=4,
     train=dict(
         type='CBGSDataset',

@@ -1,5 +1,4 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-# update ./mmdet3d/datasets/custom_3d.py to utilize virtual depth
 import tempfile
 import warnings
 from os import path as osp
@@ -223,10 +222,10 @@ class Custom3DDataset(Dataset):
         Returns:
             dict: Training data dict of the corresponding index.
         """
-        input_dict = self.get_data_info(index)
+        input_dict = self.get_data_info(index)  # get data info
         if input_dict is None:
             return None
-        self.pre_pipeline(input_dict)
+        self.pre_pipeline(input_dict)  # pre-pipeline
         example = self.pipeline(input_dict)
         if self.filter_empty_gt and \
                 (example is None or

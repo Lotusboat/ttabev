@@ -1075,7 +1075,9 @@ class PrepareImageInputs(object):
             post_rot = torch.eye(2)
             post_tran = torch.zeros(2)
 
+            # TODO: 在此处读取intrinsic，内有focal
             intrin = torch.Tensor(cam_data['cam_intrinsic'])
+            # find the focal in intrinsics: focal = intrin[0, 0] = intrin[1, 1]
 
             sensor2ego, ego2global = \
                 self.get_sensor_transforms(results['curr'], cam_name)

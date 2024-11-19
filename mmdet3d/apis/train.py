@@ -187,6 +187,7 @@ def train_detector(model,
     logger = get_mmdet_root_logger(log_level=cfg.log_level)
 
     # prepare data loaders
+    # TODO: gen-bev在此处增加了shuffle_mark到build_mmdet_dataloader的参数列表中
     dataset = dataset if isinstance(dataset, (list, tuple)) else [dataset]
     if 'imgs_per_gpu' in cfg.data:
         logger.warning('"imgs_per_gpu" is deprecated in MMDet V2.0. '

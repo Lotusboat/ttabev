@@ -13,6 +13,8 @@ import torch.distributed as dist
 import torch.nn as nn
 from mmcv import Config, DictAction
 from mmcv.runner import get_dist_info, init_dist
+import torch.utils
+import torch.utils.data
 import mmdet
 
 from mmdet import __version__ as mmdet_version
@@ -31,7 +33,7 @@ try:
 except ImportError:
     from mmdet3d.utils import setup_multi_processes
 
-# PredBN+
+# PredBN+ not used when debugging
 # class PredBNPlus(nn.Module):
 #     def __init__(self, model):
 #         super(PredBNPlus, self).__init__()
@@ -287,6 +289,7 @@ def main():
         datasets.append(build_dataset(cfg.data.train))
     # add an attribute for visualization convenience
     model.CLASSES = datasets[0].CLASSES
+
 
     # try to wrap the model with PredBN+
     # model = PredBNPlus(model)

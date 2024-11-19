@@ -324,6 +324,7 @@ class LSSViewTransformer(BaseModule):
             self.pre_compute(input)
         return self.view_transform_core(input, depth, tran_feat)
 
+
     def forward(self, input, depth_from_lidar=None):
         """Transform image-view feature into bird-eye-view feature.
 
@@ -354,7 +355,7 @@ class LSSViewTransformer(BaseModule):
         depth_digit = x[:, :self.D, ...]
         tran_feat = x[:, self.D:self.D + self.out_channels, ...]
         depth = depth_digit.softmax(dim=1)
-        return self.view_transform(input, depth, tran_feat)
+        return self.view_transform(input, depth, tran_feat)  # TODO: add depth
 
     def get_mlp_input(self, rot, tran, intrin, post_rot, post_tran, bda):
         return None
